@@ -109,7 +109,11 @@ static class SelfTest
         try
         {
             Step("test penceresi");
-            _editHostProc = (h, m, w, l) => DefWindowProcW(h, m, w, l);
+            // SC_KEYMENU'yu yut: Alt'a basılırsa Windows kullanıcı girdisi bekleyen menü döngüsüne girip takılır
+            _editHostProc = (h, m, w, l) =>
+                m == 0x0112 /* WM_SYSCOMMAND */ && (w.ToInt64() & 0xFFF0) == 0xF100 /* SC_KEYMENU */
+                    ? IntPtr.Zero
+                    : DefWindowProcW(h, m, w, l);
             var hInst = GetModuleHandleW(null);
             var wc = new WNDCLASSEXW { cbSize = Marshal.SizeOf<WNDCLASSEXW>(), lpfnWndProc = _editHostProc, hInstance = hInst, lpszClassName = "StreamDeckkSelfTest" };
             RegisterClassExW(ref wc);
@@ -118,8 +122,6 @@ static class SelfTest
             var edit = CreateWindowExW(0, "EDIT", "", 0x50800080 /* CHILD|VISIBLE|BORDER|AUTOHSCROLL */, 10, 10, 480, 30, main, IntPtr.Zero, hInst, IntPtr.Zero);
             ShowWindow(main, 5);
             Step("pencereyi öne getirme");
-            // Arka plandaki bir süreç odak alamayabilir; Alt'a basıp bırakmak Windows'un odak kilidini açar
-            Wait(WinInput.HotkeyAsync(new ushort[] { 0xa4 }), 5000);
             SetForegroundWindow(main);
             Pump(300);
             SetFocus(edit);
