@@ -173,11 +173,21 @@ jobs:
             ${{ runner.temp }}/e2e-results.json
             ${{ runner.temp }}/sd/streamdeckk.log
 
+      - name: Sürüm numarası
+        id: ver
+        shell: pwsh
+        run: |
+          $v = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version
+          "tag=v$v" | Out-File -Append $env:GITHUB_OUTPUT
+
+      # Tüm testler geçtiyse kurulum dosyasını Releases sayfasına koy (etiket yoksa oluşturulur, varsa dosyalar güncellenir)
       - name: Sürüm yayınla
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          name: StreamDeckk ${{ github.ref_name }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          name: StreamDeckk ${{ steps.ver.outputs.tag }}
           body: |
             **Kurulum:** `StreamDeckk-Kurulum.exe` dosyasını indir ve çalıştır. Masaüstü kısayolu ve güvenlik duvarı izni otomatik eklenir.
             Kurulumsuz kullanmak istersen `StreamDeckk.exe` tek başına da çalışır.
