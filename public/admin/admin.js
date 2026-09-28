@@ -529,8 +529,10 @@
   async function loadConnect() {
     let data;
     try { data = await api('GET', '/api/connect'); } catch (e) { return toast(e.message, true); }
-    const main = data.addresses.filter((a) => a.kind !== 'virtual');
-    const other = data.addresses.filter((a) => a.kind === 'virtual');
+    let main = data.addresses.filter((a) => a.kind !== 'virtual');
+    let other = data.addresses.filter((a) => a.kind === 'virtual');
+    // Yalnızca sanal bağdaştırıcı varsa (ör. sanal makine) onları gizleme, doğrudan göster
+    if (!main.length) { main = other; other = []; }
     const card = (a, i) => h('div', { class: 'qr-card' + (i === 0 ? ' primary' : '') },
       h('div', { class: 'kind' }, KIND_NAMES[a.kind]),
       h('div', { class: 'iface' }, a.name),

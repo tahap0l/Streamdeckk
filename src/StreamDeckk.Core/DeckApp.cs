@@ -350,7 +350,7 @@ public sealed partial class DeckApp
                 version = Version,
                 config = PublicConfig(),
                 toggles,
-                addresses = NetInfo.GetAddresses().Where(a => a.Kind != "virtual").Select(a => $"{a.Ip}:{Port}").ToList(),
+                addresses = PhoneAddresses(),
             });
 
             var buf = new byte[64 * 1024];
@@ -379,6 +379,14 @@ public sealed partial class DeckApp
                 try { await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
             }
         }
+    }
+
+    /// <summary>Telefonun bağlantı koparsa deneyeceği adresler (sanal bağdaştırıcılar yalnızca başka yoksa).</summary>
+    List<string> PhoneAddresses()
+    {
+        var all = NetInfo.GetAddresses();
+        var real = all.Where(a => a.Kind != "virtual").ToList();
+        return (real.Count > 0 ? real : all).Select(a => $"{a.Ip}:{Port}").ToList();
     }
 
     DeckButton? FindButton(string? pageId, string? buttonId)

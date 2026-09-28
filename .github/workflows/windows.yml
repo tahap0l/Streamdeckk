@@ -107,6 +107,45 @@ jobs:
           "Ayarlar korundu: $($cfg.pages.Count) sayfa, ses %$($cfg.volume)"
           Stop-Process $p -Force
 
+      - name: Kurulum sihirbazını derle
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          & $iscc /Qp /DAppVersion=2.0.0 installer\StreamDeckk.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Kurulum derlenemedi' }
+          "{0:N1} MB" -f ((Get-Item dist\StreamDeckk-Kurulum.exe).Length / 1MB)
+
+      - name: Kurulum ve kaldırma testi
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\StreamDeckk-Kurulum.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/TASKS=desktopicon' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Kurulum hata kodu: $($p.ExitCode)" }
+          $exe = "$env:ProgramFiles\StreamDeckk\StreamDeckk.exe"
+          if (-not (Test-Path $exe)) { throw 'Program Files altına kurulmadı' }
+          $lnk = Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'StreamDeckk.lnk'
+          if (-not (Test-Path $lnk)) { throw 'Masaüstü kısayolu yok' }
+          $rule = netsh advfirewall firewall show rule name=StreamDeckk
+          if ($LASTEXITCODE -ne 0) { throw 'Güvenlik duvarı kuralı eklenmedi' }
+          "Kuruldu: $exe, kısayol ve güvenlik duvarı kuralı tamam"
+
+          $env:STREAMDECKK_DATA = "$env:RUNNER_TEMP\sd-kurulu"
+          $app = Start-Process $exe -ArgumentList '--hidden' -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 30; $i++) { Start-Sleep 1; try { Invoke-RestMethod http://127.0.0.1:7373/api/ping | Out-Null; $ok = $true; break } catch { } }
+          if (-not $ok) { throw 'Kurulan program yanıt vermedi' }
+          "Kurulan program çalışıyor"
+
+          $un = "$env:ProgramFiles\StreamDeckk\unins000.exe"
+          $p = Start-Process $un -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -PassThru -Wait
+          Start-Sleep 3
+          if (Test-Path $exe) { throw 'Kaldırma sonrası exe hâlâ duruyor' }
+          if (Test-Path $lnk) { throw 'Kaldırma sonrası kısayol duruyor' }
+          netsh advfirewall firewall show rule name=StreamDeckk | Out-Null
+          if ($LASTEXITCODE -eq 0) { throw 'Kaldırma sonrası güvenlik duvarı kuralı duruyor' }
+          if (Get-Process StreamDeckk -ErrorAction SilentlyContinue) { throw 'Kaldırma sonrası program hâlâ çalışıyor' }
+          "Kaldırma temiz"
+
       - name: Öz-test sonucu
         if: steps.selftest.outcome == 'failure'
         run: exit 1
@@ -119,7 +158,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: StreamDeckk-Windows
-          path: dist/StreamDeckk.exe
+          path: |
+            dist/StreamDeckk-Kurulum.exe
+            dist/StreamDeckk.exe
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -135,4 +176,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/StreamDeckk.exe
+          name: StreamDeckk ${{ github.ref_name }}
+          body: |
+            **Kurulum:** `StreamDeckk-Kurulum.exe` dosyasını indir ve çalıştır. Masaüstü kısayolu ve güvenlik duvarı izni otomatik eklenir.
+            Kurulumsuz kullanmak istersen `StreamDeckk.exe` tek başına da çalışır.
+          files: |
+            dist/StreamDeckk-Kurulum.exe
+            dist/StreamDeckk.exe

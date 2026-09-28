@@ -24,11 +24,17 @@ Tuşa basınca tuş parlar, iPhone hafifçe titrer (iOS 18+) ve işlemin sonucun
 
 ## Kurulum
 
-### 1. Programı indir
+### 1. Programı indir ve kur
 
-GitHub'da **Actions → Windows derlemesi** altında en son yeşil (✓) çalışmayı aç. En alttaki **StreamDeckk-Windows** dosyasını indir ve zip'ten `StreamDeckk.exe`'yi çıkar. (Bir sürüm etiketi basıldıysa, örneğin `v2.0.0`, **Releases** sayfasından da indirebilirsin.)
+GitHub'da deponun **Releases** sayfasını aç ve **`StreamDeckk-Kurulum.exe`** dosyasını indirip çalıştır. Kurulum sihirbazı şunları yapar:
 
-Tek dosya. Kurulum veya .NET gerekmez, istediğin klasöre koyabilirsin (ör. Masaüstü).
+- programı kurar, masaüstü ve Başlat menüsü kısayolu oluşturur
+- telefonun bağlanabilmesi için **Güvenlik Duvarı iznini kendisi ekler**
+- istersen Windows açılınca otomatik başlatır
+
+Kaldırmak için: **Ayarlar → Uygulamalar → StreamDeckk → Kaldır**.
+
+> Kurulum istemiyorsan aynı sayfadaki tek dosyalık `StreamDeckk.exe` de kurulumsuz çalışır.
 
 ### 2. İlk açılış
 
