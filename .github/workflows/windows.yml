@@ -145,6 +145,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw 'Kaldırma sonrası güvenlik duvarı kuralı duruyor' }
           if (Get-Process StreamDeckk -ErrorAction SilentlyContinue) { throw 'Kaldırma sonrası program hâlâ çalışıyor' }
           "Kaldırma temiz"
+          exit 0  # son netsh "kural yok" dediği için çıkış kodu 1'di; beklenen durum
 
       - name: Öz-test sonucu
         if: steps.selftest.outcome == 'failure'
