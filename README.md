@@ -26,17 +26,20 @@ Tuşa basınca tuş parlar, iPhone hafifçe titrer (iOS 18+) ve işlemin sonucun
 
 ### 1. Programı indir
 
-GitHub'da **Actions → Windows derlemesi** altında en son başarılı çalışmayı aç. En alttaki **StreamDeckk-Windows** dosyasını indir ve zip'ten çıkar. (Sürüm etiketi `v1.0.0` gibi basıldıysa **Releases** sayfasından da indirebilirsin.)
+GitHub'da **Actions → Windows derlemesi** altında en son yeşil (✓) çalışmayı aç. En alttaki **StreamDeckk-Windows** dosyasını indir ve zip'ten `StreamDeckk.exe`'yi çıkar. (Bir sürüm etiketi basıldıysa, örneğin `v2.0.0`, **Releases** sayfasından da indirebilirsin.)
 
-- `StreamDeckk.exe`: normal kullanım (pencere açmaz, simge tepsisinde çalışır)
-- `StreamDeckk-Konsol.exe`: sorun giderme için günlükleri gösteren sürüm
+Tek dosya. Kurulum veya .NET gerekmez, istediğin klasöre koyabilirsin (ör. Masaüstü).
 
 ### 2. İlk açılış
 
 1. `StreamDeckk.exe`'ye çift tıkla.
 2. **"Windows kişisel bilgisayarınızı korudu"** uyarısı çıkarsa **Ek bilgi → Yine de çalıştır**'a tıkla. Program imzasız olduğu için bu uyarı normal.
 3. **Güvenlik Duvarı** sorarsa **Özel ağlar** için izin ver.
-4. Tarayıcıda **Kontrol Paneli** açılır, saatin yanında 🟣 simgesi belirir. Simgeye çift tıklayınca panel tekrar açılır.
+4. Tarayıcıda **Kontrol Paneli** açılır, saatin yanında 🟣 simgesi belirir. Simge görünmüyorsa saatin yanındaki **^** okuna bak. Çift tıklayınca panel tekrar açılır; sağ tıklayınca **Çıkış** menüsü gelir.
+
+Bir sorun olursa program sessizce kapanmaz, ekranda hatayı söyleyen bir mesaj çıkar.
+
+> 🧪 Bilgisayarında her şeyin çalıştığını görmek için: Başlat menüsüne `cmd` yaz, exe'nin klasörüne gidip `StreamDeckk.exe --selftest` çalıştır. Kısa bir pencere açılıp klavye ve ses testini yapar, sonucu gösterir.
 
 ### 3. iPhone'u bağla
 
@@ -80,34 +83,49 @@ Telefon, PC'nin hem Wi-Fi hem USB adresini hatırlar. Uygulama açıkken biri ko
 
 ## Veriler nerede?
 
-`%APPDATA%\StreamDeckk\` klasöründe:
+`%APPDATA%\StreamDeckk\` klasöründe (tepsi menüsü → **Veri Klasörünü Aç**):
 
 - `config.json`: sayfalar ve tuşlar
 - `sesler\`: yüklediğin ses dosyaları
+- `streamdeckk.log`: günlük (sorun bildirirken bunu gönder)
 
 Başka bir PC'ye geçerken bu klasörü kopyalaman yeterli.
+
+## Komut satırı seçenekleri
+
+| Seçenek | Ne yapar |
+|---|---|
+| `--hidden` | Paneli açmadan, sadece simge tepsisinde başlar |
+| `--console` | Günlükleri bir konsol penceresinde de gösterir |
+| `--selftest` | Klavye, ses ve simge tepsisini dener, sonucu gösterir |
 
 ---
 
 ## Geliştirme
 
+Uygulama C# / .NET 8 ile yazılmıştır. Telefon arayüzü ve kontrol paneli (`public/`) exe'nin içine gömülür.
+
+```
+src/StreamDeckk.Core     Sunucu (HTTP + WebSocket), ayarlar, kısayollar — platformdan bağımsız
+src/StreamDeckk          Windows programı: SendInput (klavye), NAudio (ses), Win32 simge tepsisi
+src/StreamDeckk.DevHost  Windows olmadan geliştirmek için simülasyon sunucusu
+public/deck              iPhone/tablet arayüzü (PWA)
+public/admin             Kontrol paneli (yalnızca 127.0.0.1)
+test/e2e                 Çalışan bir StreamDeckk'e karşı uçtan uca testler (API, WebSocket, Playwright)
+```
+
 ```bash
-npm install
-npm start            # Windows dışında "simülasyon modu": tuşlar sadece günlüğe yazılır
-npm test
-npm run build:win    # dist/StreamDeckk.exe ve dist/StreamDeckk-Konsol.exe
+# Windows exe'si (Windows'ta veya Linux'ta çapraz derleme)
+dotnet publish src/StreamDeckk -c Release -o dist
+
+# Windows olmadan: simülasyon sunucusu + testler
+dotnet run --project src/StreamDeckk.DevHost
+npm install && npm run e2e
 ```
 
-**Mimari**
+Her push'ta GitHub Actions exe'yi **gerçek bir Windows makinesinde** derler ve şunları dener:
 
-```
-iPhone (PWA)  ──WebSocket──►  Node.js sunucusu (StreamDeckk.exe)  ──127.0.0.1──►  PowerShell/C# yardımcısı
-public/deck/                  server/index.js                                     server/helper.ps1
-                              ▲                                                    • SendInput (klavye)
-PC tarayıcısı ──HTTP (sadece  │                                                    • MCI (ses)
-public/admin/   127.0.0.1)────┘                                                    • Simge tepsisi
-```
-
-- Yerel (native) npm modülü yoktur. Windows işlemleri, Windows'ta hazır gelen PowerShell 5.1 ile anlık derlenen küçük bir C# sınıfıyla yapılır.
-- `StreamDeckk.exe`, [pkg](https://github.com/yao-pkg/pkg) ile paketlenir. Konsol penceresi açmaması için PE başlığındaki alt sistem alanı GUI olarak değiştirilir (`scripts/build-win.js`).
-- Her push'ta GitHub Actions exe'yi gerçek bir Windows makinesinde derler ve duman testinden geçirir.
+- öz-testi çalıştırır (kendi penceresine SendInput ile Türkçe metin yazdırıp okur)
+- programı başlatır ve ikinci kopyanın açılmadığını doğrular
+- tüm uçtan uca testleri gerçek exe'ye karşı çalıştırır
+- yeniden başlatınca ayarların korunduğunu kontrol eder

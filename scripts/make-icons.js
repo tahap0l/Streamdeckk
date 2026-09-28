@@ -1,4 +1,5 @@
 // Uygulama ikonlarını (PNG) SVG'den üretir. Kullanım: node scripts/make-icons.js (Playwright gerekir)
+const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -32,11 +33,32 @@ const svg = (size) => `
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const out = path.join(__dirname, '..', 'public', 'deck', 'icons');
-  for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
+  const render = async (size, rounded) => {
     await page.setViewportSize({ width: size, height: size });
-    await page.setContent(`<html><body style="margin:0">${svg(size)}</body></html>`);
-    await page.screenshot({ path: path.join(out, name), omitBackground: false });
+    const body = rounded ? svg(size).replace('<rect width="512" height="512"', '<rect width="512" height="512" rx="112"') : svg(size);
+    await page.setContent(`<html><body style="margin:0;background:transparent">${body}</body></html>`);
+    return page.screenshot({ omitBackground: true });
+  };
+  for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
+    fs.writeFileSync(path.join(out, name), await render(size, false));
   }
+
+  // Windows exe simgesi: PNG içeren çok boyutlu ICO (köşeleri yuvarlatılmış)
+  const sizes = [16, 24, 32, 48, 64, 128, 256];
+  const pngs = [];
+  for (const s of sizes) pngs.push(await render(s, true));
+  const header = Buffer.alloc(6 + 16 * sizes.length);
+  header.writeUInt16LE(0, 0); header.writeUInt16LE(1, 2); header.writeUInt16LE(sizes.length, 4);
+  let offset = header.length;
+  sizes.forEach((s, i) => {
+    const e = 6 + i * 16;
+    header.writeUInt8(s === 256 ? 0 : s, e); header.writeUInt8(s === 256 ? 0 : s, e + 1);
+    header.writeUInt16LE(1, e + 4); header.writeUInt16LE(32, e + 6);
+    header.writeUInt32LE(pngs[i].length, e + 8); header.writeUInt32LE(offset, e + 12);
+    offset += pngs[i].length;
+  });
+  const ico = path.join(__dirname, '..', 'src', 'StreamDeckk', 'app.ico');
+  fs.writeFileSync(ico, Buffer.concat([header, ...pngs]));
   await browser.close();
-  console.log('İkonlar üretildi:', out);
+  console.log('İkonlar üretildi:', out, ico);
 })();

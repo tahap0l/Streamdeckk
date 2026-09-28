@@ -1,4 +1,6 @@
 node_modules/
 dist/
+bin/
+obj/
 .data/
 *.log
