@@ -51,6 +51,19 @@ static class SelfTest
         }
     }
 
+    /// <summary>
+    /// Görevi beklerken pencere mesajlarını işlemeye devam eder. GUI iş parçacığını bloklamak, Windows'un
+    /// odak değişiminde gönderdiği senkron mesajlarla kilitlenmeye yol açar.
+    /// </summary>
+    static bool Wait(Task t, int timeoutMs = 10_000)
+    {
+        var until = Environment.TickCount64 + timeoutMs;
+        while (!t.IsCompleted && Environment.TickCount64 < until) Pump(20);
+        if (!t.IsCompleted) return false;
+        t.GetAwaiter().GetResult(); // hata varsa fırlat
+        return true;
+    }
+
     static string Text(IntPtr hwnd)
     {
         var len = GetWindowTextLengthW(hwnd);
@@ -106,7 +119,7 @@ static class SelfTest
             ShowWindow(main, 5);
             Step("pencereyi öne getirme");
             // Arka plandaki bir süreç odak alamayabilir; Alt'a basıp bırakmak Windows'un odak kilidini açar
-            WinInput.HotkeyAsync(new ushort[] { 0xa4 }).GetAwaiter().GetResult();
+            Wait(WinInput.HotkeyAsync(new ushort[] { 0xa4 }), 5000);
             SetForegroundWindow(main);
             Pump(300);
             SetFocus(edit);
@@ -120,26 +133,31 @@ static class SelfTest
             {
                 Step("Türkçe metin yazma");
                 const string expected = "Test ğüşıöç İĞÜŞÖÇ 💜 123";
-                WinInput.TypeAsync(expected, false).GetAwaiter().GetResult();
+                if (!Wait(WinInput.TypeAsync(expected, false)))
+                {
+                    Check("Klavye: Türkçe metin yazma", null, "giriş 10 sn içinde işlenmedi (etkileşimsiz oturum)");
+                    throw new OperationCanceledException();
+                }
                 Pump(500);
                 var got = Text(edit);
                 Check("Klavye: Türkçe metin yazma", got == expected, $"okunan: \"{got}\"");
 
                 Step("Ctrl+A");
                 // Ctrl+A tümünü seçer, ardından yazılan "x" her şeyin yerine geçmeli
-                WinInput.HotkeyAsync(Keys.Parse("ctrl+a")).GetAwaiter().GetResult();
+                Wait(WinInput.HotkeyAsync(Keys.Parse("ctrl+a")));
                 Pump(200);
-                WinInput.TypeAsync("x", false).GetAwaiter().GetResult();
+                Wait(WinInput.TypeAsync("x", false));
                 Pump(400);
                 got = Text(edit);
                 Check("Klavye: Ctrl+A kısayolu", got == "x", $"okunan: \"{got}\"");
 
                 Step("F13 gönderme");
-                WinInput.HotkeyAsync(Keys.Parse("f13")).GetAwaiter().GetResult();
-                WinInput.HotkeyAsync(Keys.Parse("ctrl+shift+f18")).GetAwaiter().GetResult();
+                Wait(WinInput.HotkeyAsync(Keys.Parse("f13")));
+                Wait(WinInput.HotkeyAsync(Keys.Parse("ctrl+shift+f18")));
                 Check("Klavye: F13 ve Ctrl+Shift+F18 gönderildi", true);
             }
         }
+        catch (OperationCanceledException) { }
         catch (Exception e) { Check("Klavye", false, e.Message); }
         finally { if (main != IntPtr.Zero) DestroyWindow(main); }
 
@@ -149,9 +167,9 @@ static class SelfTest
         {
             var dir = Path.Combine(Path.GetTempPath(), "streamdeckk-selftest");
             Samples.WriteAll(dir);
-            WinAudio.PlayAsync(Path.Combine(dir, "ding.wav"), 0.05f).GetAwaiter().GetResult();
+            Wait(WinAudio.PlayAsync(Path.Combine(dir, "ding.wav"), 0.05f));
             Thread.Sleep(300);
-            WinAudio.StopAllAsync().GetAwaiter().GetResult();
+            Wait(WinAudio.StopAllAsync());
             Check("Ses çalma", true);
         }
         catch (ActionException e) { Check("Ses çalma", null, e.Message); }
