@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="StreamDeckk">
+  <meta name="theme-color" content="#07040c">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="manifest" id="manifest" href="/manifest.webmanifest">
+  <script>
+    // Ana ekrana eklenen uygulama eşleştirme anahtarını da hatırlasın
+    (function () {
+      var t = new URLSearchParams(location.search).get('t');
+      if (t) document.getElementById('manifest').href = '/manifest.webmanifest?t=' + encodeURIComponent(t);
+    })();
+  </script>
+  <link rel="stylesheet" href="/style.css">
+  <title>StreamDeckk</title>
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="top">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span id="page-name" class="page-name">StreamDeckk</span>
+      </div>
+      <div class="chips">
+        <span id="vol" class="chip vol" hidden>🔊 <b>80</b></span>
+        <span id="conn" class="chip conn"><i></i><span>Bağlanıyor</span></span>
+      </div>
+    </header>
+    <main id="pager" class="pager"></main>
+    <nav id="dots" class="dots" aria-label="Sayfalar"></nav>
+  </div>
+
+  <div id="overlay" class="overlay show">
+    <div class="card">
+      <div class="spinner" id="ov-spin"></div>
+      <div class="ov-icon" id="ov-icon" hidden>🔗</div>
+      <h2 id="ov-title">PC'ye bağlanılıyor…</h2>
+      <p id="ov-text">StreamDeckk PC'de açık olmalı.</p>
+      <ul class="tips" id="ov-tips">
+        <li>Telefon ve PC aynı Wi-Fi ağında mı?</li>
+        <li>USB kullanıyorsan iPhone'da <b>Kişisel Erişim Noktası</b> açık mı?</li>
+        <li>Windows Güvenlik Duvarı StreamDeckk'e izin veriyor mu?</li>
+      </ul>
+      <button id="ov-retry" class="btn">Tekrar dene</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <!-- iOS'ta titreşim için gizli anahtar (iOS 18+) -->
+  <label id="haptic" class="haptic" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
+  <script src="/app.js"></script>
+</body>
+</html>

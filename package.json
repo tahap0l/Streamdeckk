@@ -1,0 +1,29 @@
+{
+  "name": "streamdeckk",
+  "version": "1.0.0",
+  "description": "Telefonunu/tabletini yayın için Stream Deck'e dönüştürür (TikTok Live Studio uyumlu).",
+  "main": "server/index.js",
+  "bin": "server/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js --console",
+    "test": "node --test",
+    "build:win": "node scripts/build-win.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.6.0"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*",
+      "server/helper.ps1"
+    ],
+    "targets": [
+      "node22-win-x64"
+    ]
+  }
+}

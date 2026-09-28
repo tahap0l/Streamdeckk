@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <title>StreamDeckk Kontrol Paneli</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <div>
+        <div class="brand-name">StreamDeckk</div>
+        <div class="brand-sub">Kontrol Paneli</div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="keys" class="active">🎛️ Tuşlar</button>
+      <button data-tab="sounds">🎵 Sesler</button>
+      <button data-tab="connect">📱 Bağlan</button>
+      <button data-tab="settings">⚙️ Ayarlar</button>
+      <button data-tab="help">❔ Yardım</button>
+    </nav>
+    <div class="status">
+      <span class="pill" id="st-backend"><i></i><span>PC yardımcısı…</span></span>
+      <span class="pill" id="st-clients"><i></i><span>0 cihaz</span></span>
+      <span class="save" id="save-state"></span>
+    </div>
+  </header>
+
+  <!-- ============ TUŞLAR ============ -->
+  <section class="tab-panel active" id="tab-keys">
+    <aside class="pages-col">
+      <div class="col-head">
+        <h3>Sayfalar</h3>
+        <button class="icon-btn" id="page-add" title="Sayfa ekle">＋</button>
+      </div>
+      <ul id="page-list" class="page-list"></ul>
+      <p class="hint">Telefonda sayfalar arasında sağa/sola kaydırarak geçersin.</p>
+    </aside>
+
+    <div class="preview-col">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-head">
+          <span class="logo small" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span id="pv-page-name">Sayfa</span>
+        </div>
+        <div id="pv-grid" class="pv-grid"></div>
+        <div id="pv-dots" class="pv-dots"></div>
+      </div>
+      <p class="hint center">Tuşa tıkla → düzenle · Boş kareye tıkla → yeni tuş · Sürükle → yer değiştir</p>
+    </div>
+
+    <aside class="editor-col" id="editor">
+      <div class="empty-editor" id="editor-empty">
+        <div class="big">👈</div>
+        <p>Düzenlemek için soldaki telefonda bir tuş seç<br>ya da boş bir kareye tıklayıp yeni tuş ekle.</p>
+      </div>
+      <div id="editor-form" hidden></div>
+    </aside>
+  </section>
+
+  <!-- ============ SESLER ============ -->
+  <section class="tab-panel" id="tab-sounds">
+    <div class="narrow">
+      <h2>Ses efektleri</h2>
+      <p class="lead">Sesler PC'nin varsayılan ses çıkışından çalar. TikTok Live Studio'da <b>masaüstü sesi</b> açıksa yayına da gider.</p>
+      <div class="card">
+        <label class="row-label" for="master-volume">Genel soundboard ses seviyesi</label>
+        <div class="range-row">
+          <input type="range" id="master-volume" min="0" max="100" step="5">
+          <output id="master-volume-out">80</output>
+        </div>
+      </div>
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="sound-input" accept=".mp3,.wav,.wma,.m4a,.aac,audio/*" multiple hidden>
+        <div class="dz-icon">🎧</div>
+        <div><b>Ses dosyalarını buraya sürükle</b> ya da tıklayıp seç</div>
+        <div class="muted">mp3, wav, m4a, wma, aac · en fazla 30 MB</div>
+      </label>
+      <div class="list-head">
+        <h3>Kütüphane</h3>
+        <button class="btn ghost" id="open-folder">📂 Klasörü aç</button>
+      </div>
+      <ul class="sound-list" id="sound-list"></ul>
+    </div>
+  </section>
+
+  <!-- ============ BAĞLAN ============ -->
+  <section class="tab-panel" id="tab-connect">
+    <div class="narrow wide">
+      <h2>Telefonu / tableti bağla</h2>
+      <p class="lead">iPhone'da <b>Kamera</b> uygulamasını aç, aşağıdaki QR kodu okut ve çıkan bağlantıya dokun. Safari'de açılır.</p>
+      <div class="qr-grid" id="qr-grid"></div>
+      <details class="other-adapters" id="other-adapters" hidden>
+        <summary>Diğer ağ bağdaştırıcıları</summary>
+        <div class="qr-grid" id="qr-grid-other"></div>
+      </details>
+      <div class="steps card">
+        <h3>Ana ekrana uygulama olarak ekle</h3>
+        <ol>
+          <li>QR'ı okutup sayfayı <b>Safari</b>'de aç.</li>
+          <li>Alttaki <b>Paylaş</b> düğmesine (kare ve yukarı ok) dokun.</li>
+          <li><b>Ana Ekrana Ekle</b>'yi seç, sonra <b>Ekle</b>'ye dokun.</li>
+          <li>Artık ana ekrandaki <b>StreamDeckk</b> simgesinden tam ekran açılır.</li>
+        </ol>
+        <p class="muted">İpucu: Yayında ekranın kararmaması için iPhone'da <b>Ayarlar → Ekran ve Parlaklık → Otomatik Kilit → Hiçbir Zaman</b> yap.</p>
+      </div>
+      <div class="card danger-zone">
+        <div>
+          <h3>Eşleştirmeyi sıfırla</h3>
+          <p class="muted">Bağlı tüm cihazların bağlantısı kesilir. Tekrar bağlanmak için yeni QR kodu okutman gerekir.</p>
+        </div>
+        <button class="btn danger" id="regen-token">Sıfırla</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AYARLAR ============ -->
+  <section class="tab-panel" id="tab-settings">
+    <div class="narrow">
+      <h2>Ayarlar</h2>
+      <div class="card form-grid">
+        <label for="grid-cols">Sütun sayısı</label>
+        <input type="number" id="grid-cols" min="2" max="8">
+        <label for="grid-rows">Satır sayısı</label>
+        <input type="number" id="grid-rows" min="2" max="10">
+        <p class="muted span2">iPhone 13 dikey için önerilen: 3 sütun × 5 satır. Tablette 4 × 6 veya 5 × 6 deneyebilirsin. Küçültünce dışarıda kalan tuşlar silinir.</p>
+        <label for="port">Port</label>
+        <input type="number" id="port" min="1024" max="65535">
+        <p class="muted span2">Değiştirirsen StreamDeckk'i yeniden başlatıp QR kodu tekrar okutman gerekir.</p>
+      </div>
+      <div class="card info-list" id="about"></div>
+    </div>
+  </section>
+
+  <!-- ============ YARDIM ============ -->
+  <section class="tab-panel" id="tab-help">
+    <div class="narrow prose">
+      <h2>Yardım</h2>
+
+      <h3>🎬 TikTok Live Studio kısayolları</h3>
+      <p>TikTok Live Studio'nun dışarıdan kontrol arayüzü yok. StreamDeckk bu yüzden Live Studio'nun <b>kısayol tuşlarını</b> senin yerine basar.</p>
+      <ol>
+        <li>Live Studio'da <b>Ayarlar → Kısayol tuşları</b> bölümünü aç.</li>
+        <li>Örneğin "Mikrofonu sessize al" satırındaki kutuya tıkla.</li>
+        <li>Telefondaki <b>Mikrofon</b> tuşuna bas. StreamDeckk <code>F13</code> gönderir ve Live Studio bunu kaydeder.</li>
+        <li>Sahneler ve diğer işlemler için de aynısını yap. Varsayılan tuşlar <code>F13</code>–<code>F18</code> arasında.</li>
+      </ol>
+      <p><code>F13</code>–<code>F24</code> tuşları gerçek klavyede olmadığı için oyunlarla veya başka programlarla <b>asla çakışmaz</b>. Bu yüzden en iyi seçim bunlar. Live Studio bunları kabul etmezse <code>Ctrl + Alt + Shift + 1</code> gibi bir kombinasyon kullan.</p>
+      <p class="note">Live Studio <b>yönetici olarak</b> çalışıyorsa Windows, normal programların ona tuş göndermesini engeller. Bu durumda StreamDeckk'i de sağ tık → <b>Yönetici olarak çalıştır</b> ile aç.</p>
+
+      <h3>🔌 USB kablo ile bağlanma</h3>
+      <ol>
+        <li>PC'de <b>Apple Devices</b> (Microsoft Store) veya iTunes kurulu olmalı. USB sürücüsü bunlarla gelir.</li>
+        <li>iPhone'da <b>Ayarlar → Kişisel Erişim Noktası → Başkalarının Katılmasına İzin Ver</b>'i aç.</li>
+        <li>Kabloyu tak, iPhone'da "Bu bilgisayara güven" sorusuna <b>Güven</b> de.</li>
+        <li><b>Bağlan</b> sekmesinde "iPhone (USB)" QR kodu görünür. Onu okut.</li>
+      </ol>
+      <p class="note">Wi-Fi ve USB aynı anda bağlıyken Windows interneti telefon üzerinden de kullanabilir. Yayının mobil veriye kaymaması için yayında Wi-Fi'ı tercih et ya da USB'yi yedek olarak düşün. Telefonda uygulama açıkken bir bağlantı koparsa, diğer bilinen adrese otomatik geçer.</p>
+
+      <h3>🛡️ Bağlanamıyorum</h3>
+      <ul>
+        <li>İlk açılışta Windows Güvenlik Duvarı sorar. <b>Özel ağlar</b> için izin ver.</li>
+        <li>Wi-Fi ağın Windows'ta <b>Genel</b> olarak ayarlıysa: Ayarlar → Ağ ve İnternet → Wi-Fi → ağın adı → <b>Özel ağ</b> seç.</li>
+        <li>Telefon ve PC aynı modeme bağlı olmalı. Misafir ağları genelde cihazları birbirinden ayırır.</li>
+        <li>PC'nin IP adresi değişirse QR kodu yeniden okut.</li>
+      </ul>
+
+      <h3>🔊 Sesler yayına gitmiyor</h3>
+      <ul>
+        <li>Live Studio'da <b>masaüstü sesi / sistem sesi</b> kaynağının açık olduğundan emin ol.</li>
+        <li>Sesler Windows'un varsayılan çıkış cihazından çalar (Ses ayarları → Çıkış).</li>
+      </ul>
+
+      <h3>🔒 Güvenlik</h3>
+      <p>Telefon, QR koddaki gizli anahtarla bağlanır. Anahtarı olmayan kimse tuşlara basamaz. Bu kontrol paneli yalnızca bu bilgisayardan açılabilir. Anahtarın başkasının eline geçtiğini düşünürsen <b>Bağlan → Eşleştirmeyi sıfırla</b>.</p>
+    </div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

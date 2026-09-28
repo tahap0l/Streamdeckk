@@ -1,0 +1,69 @@
+name: Windows derlemesi
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:win
+
+      # Gerçek Windows'ta: exe açılıyor mu, PowerShell/C# yardımcısı derlenip hazır oluyor mu, tuş gönderiliyor mu?
+      - name: Duman testi
+        shell: pwsh
+        run: |
+          $env:STREAMDECKK_DATA = "$env:RUNNER_TEMP\sd"
+          $proc = Start-Process -FilePath dist\StreamDeckk-Konsol.exe -ArgumentList '--hidden' -PassThru
+          $ready = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $s = Invoke-RestMethod http://127.0.0.1:7373/api/status
+              Write-Host "yardımcı: $($s.backend) $($s.backendError)"
+              if ($s.backend -eq 'ready') { $ready = $true; break }
+            } catch { }
+          }
+          Get-Content "$env:STREAMDECKK_DATA\streamdeckk.log" -ErrorAction SilentlyContinue
+          if (-not $ready) { Stop-Process $proc -Force; throw 'PC yardımcısı hazır olmadı' }
+
+          $h = @{ 'X-StreamDeckk' = '1' }
+          $r = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:7373/api/test -Headers $h -ContentType 'application/json' -Body '{"action":{"kind":"hotkey","keys":"f13"}}'
+          Write-Host "kısayol: $($r | ConvertTo-Json -Compress)"
+          $r = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:7373/api/test -Headers $h -ContentType 'application/json' -Body '{"action":{"kind":"text","text":"test ğüşiöç","enter":false}}'
+          Write-Host "metin: $($r | ConvertTo-Json -Compress)"
+          try {
+            $r = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:7373/api/test -Headers $h -ContentType 'application/json' -Body '{"action":{"kind":"sound","sound":"ding.wav","volume":100}}'
+            Write-Host "ses: $($r | ConvertTo-Json -Compress)"
+          } catch { Write-Host "ses testi atlandı (sunucuda ses kartı olmayabilir): $($_.ErrorDetails.Message)" }
+          Stop-Process $proc -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StreamDeckk-Windows
+          path: |
+            dist/StreamDeckk.exe
+            dist/StreamDeckk-Konsol.exe
+
+      - name: Sürüm yayınla
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/StreamDeckk.exe
+            dist/StreamDeckk-Konsol.exe
