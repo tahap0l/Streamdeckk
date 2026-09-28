@@ -311,4 +311,20 @@ async function main() {
   process.on('SIGTERM', shutdown);
 }
 
-main().catch((e) => { log('Başlatılamadı:', e.stack || e.message); process.exit(1); });
+// Konsolsuz exe'de hata sessizce kaybolmasın: Windows'ta mesaj kutusu göster
+function showFatal(message) {
+  if (process.platform !== 'win32') return;
+  const text = `StreamDeckk başlatılamadı:\n\n${message}\n\nAyrıntılar: ${LOG_FILE}`.replace(/'/g, "''");
+  try {
+    require('child_process').spawnSync('powershell.exe', ['-NoProfile', '-Command',
+      `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('${text}', 'StreamDeckk', 'OK', 'Error') | Out-Null`],
+    { windowsHide: true, timeout: 120000 });
+  } catch {}
+}
+
+main().catch((e) => {
+  log('Başlatılamadı:', e.stack || e.message);
+  const hint = e.code === 'EADDRINUSE' ? `Port ${port} başka bir program tarafından kullanılıyor.` : e.message;
+  showFatal(hint);
+  process.exit(1);
+});

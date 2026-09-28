@@ -53,6 +53,23 @@ jobs:
           } catch { Write-Host "ses testi atlandı (sunucuda ses kartı olmayabilir): $($_.ErrorDetails.Message)" }
           Stop-Process $proc -Force
 
+      # Kullanıcının çift tıkladığı konsolsuz exe de açılıp hazır oluyor mu?
+      - name: Konsolsuz exe testi
+        shell: pwsh
+        run: |
+          $env:STREAMDECKK_DATA = "$env:RUNNER_TEMP\sd-gui"
+          Start-Sleep -Seconds 2
+          $proc = Start-Process -FilePath dist\StreamDeckk.exe -ArgumentList '--hidden' -PassThru
+          $ready = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 1
+            if ($proc.HasExited) { break }
+            try { if ((Invoke-RestMethod http://127.0.0.1:7373/api/status).backend -eq 'ready') { $ready = $true; break } } catch { }
+          }
+          Get-Content "$env:STREAMDECKK_DATA\streamdeckk.log" -ErrorAction SilentlyContinue
+          if (-not $proc.HasExited) { Stop-Process $proc -Force }
+          if (-not $ready) { throw "StreamDeckk.exe hazır olmadı (çıkış kodu: $($proc.ExitCode))" }
+
       - uses: actions/upload-artifact@v4
         with:
           name: StreamDeckk-Windows
