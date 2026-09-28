@@ -12,13 +12,33 @@ namespace StreamDeckk;
 static class SelfTest
 {
     static readonly StringBuilder Report = new();
+    static readonly object Gate = new();
     static int _failed;
+    static string? _file;
+    static string _step = "başlangıç";
+    static WndProc? _editHostProc; // GC toplamasın: pencere yaşadıkça Windows bunu çağırır
+
+    /// <summary>Her satır dosyaya hemen yazılır; takılma olursa nerede olduğu görünür.</summary>
+    static void Line(string s)
+    {
+        lock (Gate)
+        {
+            Report.AppendLine(s);
+            if (_file != null) { try { File.AppendAllText(_file, s + Environment.NewLine); } catch { } }
+        }
+    }
+
+    static void Step(string name)
+    {
+        _step = name;
+        Line($"...  {name}");
+    }
 
     static void Check(string name, bool? pass, string detail = "")
     {
         var mark = pass switch { true => "OK  ", false => "FAIL", null => "SKIP" };
         if (pass == false) _failed++;
-        Report.AppendLine($"{mark} {name}{(detail.Length > 0 ? " — " + detail : "")}");
+        Line($"{mark} {name}{(detail.Length > 0 ? " — " + detail : "")}");
     }
 
     static void Pump(int ms)
@@ -41,7 +61,19 @@ static class SelfTest
 
     public static int Run(string? resultFile)
     {
+        _file = resultFile;
+        if (_file != null) File.WriteAllText(_file, "");
+        SetErrorMode(0x0002 /* SEM_NOGPFAULTERRORBOX: çökmede bekleyen hata penceresi açma */);
+        // Bekçi: bir adım takılırsa raporla ve çık
+        new Thread(() =>
+        {
+            Thread.Sleep(40_000);
+            Line($"FAIL zaman aşımı — \"{_step}\" adımında takıldı");
+            Environment.Exit(2);
+        }) { IsBackground = true }.Start();
+
         // 1) Kısayol çözümleme
+        Step("kısayol çözümleme");
         try
         {
             var ok = Keys.Parse("m+ctrl+shift").SequenceEqual(new ushort[] { 0xa2, 0xa0, 0x4d })
@@ -51,6 +83,7 @@ static class SelfTest
         catch (Exception e) { Check("Kısayol çözümleme", false, e.Message); }
 
         // 2) Simge çizimi ve tepsi
+        Step("simge tepsisi");
         try
         {
             using var tray = new Tray();
@@ -62,14 +95,16 @@ static class SelfTest
         IntPtr main = IntPtr.Zero;
         try
         {
-            WndProc proc = (h, m, w, l) => DefWindowProcW(h, m, w, l);
+            Step("test penceresi");
+            _editHostProc = (h, m, w, l) => DefWindowProcW(h, m, w, l);
             var hInst = GetModuleHandleW(null);
-            var wc = new WNDCLASSEXW { cbSize = Marshal.SizeOf<WNDCLASSEXW>(), lpfnWndProc = proc, hInstance = hInst, lpszClassName = "StreamDeckkSelfTest" };
+            var wc = new WNDCLASSEXW { cbSize = Marshal.SizeOf<WNDCLASSEXW>(), lpfnWndProc = _editHostProc, hInstance = hInst, lpszClassName = "StreamDeckkSelfTest" };
             RegisterClassExW(ref wc);
             main = CreateWindowExW(0x8 /* TOPMOST */, "StreamDeckkSelfTest", "StreamDeckk öz-test", 0x10CF0000 /* OVERLAPPEDWINDOW|VISIBLE */,
                 100, 100, 520, 140, IntPtr.Zero, IntPtr.Zero, hInst, IntPtr.Zero);
             var edit = CreateWindowExW(0, "EDIT", "", 0x50800080 /* CHILD|VISIBLE|BORDER|AUTOHSCROLL */, 10, 10, 480, 30, main, IntPtr.Zero, hInst, IntPtr.Zero);
             ShowWindow(main, 5);
+            Step("pencereyi öne getirme");
             // Arka plandaki bir süreç odak alamayabilir; Alt'a basıp bırakmak Windows'un odak kilidini açar
             WinInput.HotkeyAsync(new ushort[] { 0xa4 }).GetAwaiter().GetResult();
             SetForegroundWindow(main);
@@ -83,12 +118,14 @@ static class SelfTest
             }
             else
             {
+                Step("Türkçe metin yazma");
                 const string expected = "Test ğüşıöç İĞÜŞÖÇ 💜 123";
                 WinInput.TypeAsync(expected, false).GetAwaiter().GetResult();
                 Pump(500);
                 var got = Text(edit);
                 Check("Klavye: Türkçe metin yazma", got == expected, $"okunan: \"{got}\"");
 
+                Step("Ctrl+A");
                 // Ctrl+A tümünü seçer, ardından yazılan "x" her şeyin yerine geçmeli
                 WinInput.HotkeyAsync(Keys.Parse("ctrl+a")).GetAwaiter().GetResult();
                 Pump(200);
@@ -97,6 +134,7 @@ static class SelfTest
                 got = Text(edit);
                 Check("Klavye: Ctrl+A kısayolu", got == "x", $"okunan: \"{got}\"");
 
+                Step("F13 gönderme");
                 WinInput.HotkeyAsync(Keys.Parse("f13")).GetAwaiter().GetResult();
                 WinInput.HotkeyAsync(Keys.Parse("ctrl+shift+f18")).GetAwaiter().GetResult();
                 Check("Klavye: F13 ve Ctrl+Shift+F18 gönderildi", true);
@@ -106,6 +144,7 @@ static class SelfTest
         finally { if (main != IntPtr.Zero) DestroyWindow(main); }
 
         // 4) Ses (sunucularda ses kartı olmayabilir: yalnızca raporla)
+        Step("ses çalma");
         try
         {
             var dir = Path.Combine(Path.GetTempPath(), "streamdeckk-selftest");
@@ -118,10 +157,10 @@ static class SelfTest
         catch (ActionException e) { Check("Ses çalma", null, e.Message); }
         catch (Exception e) { Check("Ses çalma", false, e.ToString()); }
 
-        Report.AppendLine(_failed == 0 ? "SONUÇ: BAŞARILI" : $"SONUÇ: {_failed} HATA");
-        var text = Report.ToString();
-        if (resultFile != null) File.WriteAllText(resultFile, text);
-        else MessageBoxW(IntPtr.Zero, text, "StreamDeckk öz-test", MB_OK | (_failed == 0 ? MB_ICONINFORMATION : MB_ICONERROR));
+        Line(_failed == 0 ? "SONUÇ: BAŞARILI" : $"SONUÇ: {_failed} HATA");
+        string text;
+        lock (Gate) text = Report.ToString();
+        if (resultFile == null) MessageBoxW(IntPtr.Zero, text, "StreamDeckk öz-test", MB_OK | (_failed == 0 ? MB_ICONINFORMATION : MB_ICONERROR));
         return _failed == 0 ? 0 : 1;
     }
 }

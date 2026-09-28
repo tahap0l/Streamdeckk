@@ -145,6 +145,7 @@ static class Native
     public static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 
     [DllImport("kernel32.dll")] public static extern bool AllocConsole();
+    [DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint mode);
     [DllImport("kernel32.dll")] public static extern bool AttachConsole(int pid);
     [DllImport("shcore.dll")] public static extern int SetProcessDpiAwareness(int value);
 }

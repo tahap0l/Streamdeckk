@@ -40,12 +40,16 @@ jobs:
 
       # Gerçek Windows: kendi penceresine SendInput ile Türkçe metin yazıp okur, simge tepsisini ve sesi dener
       - name: Öz-test (klavye / simge tepsisi / ses)
+        id: selftest
+        continue-on-error: true
         shell: pwsh
         run: |
           $out = "$env:RUNNER_TEMP\selftest.txt"
           $p = Start-Process -FilePath dist\StreamDeckk.exe -ArgumentList '--selftest', $out -PassThru
-          if (-not $p.WaitForExit(60000)) { Stop-Process $p -Force; throw 'Öz-test zaman aşımına uğradı' }
-          Get-Content $out -Encoding utf8
+          $done = $p.WaitForExit(60000)
+          if (-not $done) { Stop-Process $p -Force }
+          Get-Content $out -Encoding utf8 -ErrorAction SilentlyContinue
+          if (-not $done) { throw 'Öz-test 60 sn içinde bitmedi' }
           if ($p.ExitCode -ne 0) { throw "Öz-test başarısız (çıkış kodu $($p.ExitCode))" }
 
       - name: Programı başlat
@@ -102,6 +106,10 @@ jobs:
           if ($cfg.pages.Count -ne $before.pages.Count) { throw 'Sayfalar korunmadı' }
           "Ayarlar korundu: $($cfg.pages.Count) sayfa, ses %$($cfg.volume)"
           Stop-Process $p -Force
+
+      - name: Öz-test sonucu
+        if: steps.selftest.outcome == 'failure'
+        run: exit 1
 
       - name: Günlük
         if: always()

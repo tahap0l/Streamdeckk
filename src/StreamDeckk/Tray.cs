@@ -113,6 +113,8 @@ sealed class Tray : IDisposable
             Shell_NotifyIconW(NIM_DELETE, ref d);
             _added = false;
         }
+        // Pencereyi de yok et: aksi halde nesne toplandıktan sonra Windows ölü işleyiciyi çağırır
+        DestroyWindow(_hwnd);
         DestroyIcon(_icon);
     }
 }
